@@ -108,6 +108,8 @@ export const createApp = ((...args) => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
+    //从createApp()中获取组件,_component 就是在调用createApp()时传入的组件
+    //如果组件没有render和template，则将容器的内容赋值给组件的template
     const component = app._component
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
@@ -116,6 +118,7 @@ export const createApp = ((...args) => {
       // rendered by the server, the template should not contain any user data.
       component.template = container.innerHTML
       // 2.x compat check
+      // vue2.x 兼容性检查,若发现旧写法就给弃用警告：
       if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
         for (let i = 0; i < (container as Element).attributes.length; i++) {
           const attr = (container as Element).attributes[i]
@@ -225,11 +228,19 @@ function injectCompilerOptionsCheck(app: App) {
   }
 }
 
+/**
+ * 标准化容器
+ * 如果传入的是字符串，则使用 document.querySelector 获取容器，
+ * 如果传入的是 DOM 元素，则直接返回，
+ * @param container 容器
+ * @returns 标准化后的容器
+ */
 function normalizeContainer(
   container: Element | ShadowRoot | string,
 ): Element | ShadowRoot | null {
   if (isString(container)) {
     const res = document.querySelector(container)
+    //开发环境下如果没有容器报出警告
     if (__DEV__ && !res) {
       warn(
         `Failed to mount app: mount target selector "${container}" returned null.`,
@@ -237,6 +248,7 @@ function normalizeContainer(
     }
     return res
   }
+  //开发环境下如果容器是 ShadowRoot 且 mode 为 closed 报出警告（mode 为 closed 的 ShadowRoot 不支持 DOM 操作）
   if (
     __DEV__ &&
     window.ShadowRoot &&
