@@ -264,6 +264,7 @@ export function createAppAPI<HostElement>(
       rootProps = null
     }
 
+    // 初始化应用上下文
     const context = createAppContext()
     const installedPlugins = new WeakSet()
     const pluginCleanupFns: Array<() => any> = []
