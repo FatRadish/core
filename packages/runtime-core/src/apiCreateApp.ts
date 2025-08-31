@@ -355,7 +355,6 @@ export function createAppAPI<HostElement>(
         context.directives[name] = directive
         return app
       },
-
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,

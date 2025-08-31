@@ -463,75 +463,88 @@ function createBaseVNode(
   needFullChildrenNormalization = false,
 ): VNode {
   const vnode = {
-    __v_isVNode: true,
-    __v_skip: true,
-    type,
-    props,
-    key: props && normalizeKey(props),
-    ref: props && normalizeRef(props),
-    scopeId: currentScopeId,
-    slotScopeIds: null,
-    children,
-    component: null,
-    suspense: null,
-    ssContent: null,
-    ssFallback: null,
-    dirs: null,
-    transition: null,
-    el: null,
-    anchor: null,
-    target: null,
-    targetStart: null,
-    targetAnchor: null,
-    staticCount: 0,
-    shapeFlag,
-    patchFlag,
-    dynamicProps,
-    dynamicChildren: null,
-    appContext: null,
-    ctx: currentRenderingInstance,
+    __v_isVNode: true, // 标识这是一个 VNode
+    __v_skip: true, // 跳过某些处理
+    type, // VNode 类型
+    props, // 属性对象
+    key: props && normalizeKey(props), // 标准化的 key
+    ref: props && normalizeRef(props), // 标准化的 ref
+    scopeId: currentScopeId, // 当前作用域 ID
+    slotScopeIds: null, // 插槽作用域 ID
+    children, // 子节点
+    component: null, // 组件实例
+    suspense: null, // Suspense 相关
+    ssContent: null, // SSR 内容
+    ssFallback: null, // SSR 降级内容
+    dirs: null, // 指令
+    transition: null, // 过渡效果
+    el: null, // DOM 元素引用
+    anchor: null, // 锚点
+    target: null, // 目标（Teleport 用）
+    targetStart: null, // 目标开始位置
+    targetAnchor: null, // 目标锚点
+    staticCount: 0, // 静态节点计数
+    shapeFlag, // 形状标记
+    patchFlag, // 补丁标记
+    dynamicProps, // 动态属性
+    dynamicChildren: null, // 动态子节点
+    appContext: null, // 应用上下文
+    ctx: currentRenderingInstance, // 当前渲染实例
   } as VNode
 
   if (needFullChildrenNormalization) {
+    // 通过递归normalizeChildren，通过位运算将子节点的类型信息添加到父节点中
     normalizeChildren(vnode, children)
     // normalize suspense children
+    // 异步组件调用 自生调用normalize标准化
     if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
       ;(type as typeof SuspenseImpl).normalize(vnode)
     }
   } else if (children) {
     // compiled element vnode - if children is passed, only possible types are
     // string or Array.
+    // 如果传入了子节点，唯一可能就是字符串或者数组
     vnode.shapeFlag |= isString(children)
       ? ShapeFlags.TEXT_CHILDREN
       : ShapeFlags.ARRAY_CHILDREN
   }
 
-  // validate key
+  // 开发环境下校验key 为NaaN 情况
   if (__DEV__ && vnode.key !== vnode.key) {
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
 
   // track vnode for block tree
+  // 跟踪块树的 vnode
   if (
+    //块级树优化已启用
     isBlockTreeEnabled > 0 &&
     // avoid a block node from tracking itself
+    // 避免块节点跟踪自己
     !isBlockNode &&
     // has current parent block
+    // 检查是否有父级块可以添加当前节点
+    // 块是层级结构的，子节点需要添加到父块中
     currentBlock &&
     // presence of a patch flag indicates this node needs patching on updates.
     // component nodes also should always be patched, because even if the
     // component doesn't need to update, it needs to persist the instance on to
     // the next vnode so that it can be properly unmounted later.
+    // vnode.patchFlag > 0 表示节点需要在更新时候进行修补，
+    // shapeFlag & ShapeFlags.COMPONENT 组件节点也应该更新，因为即使组件不需要更新，它也需要将实例持久化到下一个 vnode 上，以便稍后可以正确卸载
     (vnode.patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.
+    // EVENTS 标志仅用于水合，如果它是唯一的标志，则由于处理程序缓存，vnode 不应被视为动态的。
     vnode.patchFlag !== PatchFlags.NEED_HYDRATION
   ) {
     currentBlock.push(vnode)
   }
 
   if (__COMPAT__) {
+    // 对vue2 上的v-model 写法兼容
     convertLegacyVModelProps(vnode)
+    // 对vue2 上的vNode 写法兼容
     defineLegacyVNodeProperties(vnode)
   }
 
@@ -540,10 +553,19 @@ function createBaseVNode(
 
 export { createBaseVNode as createElementVNode }
 
+// 在开发模式下会对传入参数进行转换，方便开发调试
 export const createVNode = (
   __DEV__ ? createVNodeWithArgsTransform : _createVNode
 ) as typeof _createVNode
 
+/**
+ *  @type 指定要创建的 VNode 类型
+ *  @props vnode 的属性
+ *  @children vnode 的子节点
+ *  @pathFlag patch 标记，用户diff优化
+ *  @dynamicProps 动态属性名数字，指那些属性会发生动态变化，配合patchFlag 进行diff优化
+ *  @isBlockNode 是否是块节点
+ */
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
@@ -552,6 +574,9 @@ function _createVNode(
   dynamicProps: string[] | null = null,
   isBlockNode = false,
 ): VNode {
+  // 当type为空或为NULL_DYNAMIC_COMPONENT时（动态节点），创建一个注释节点
+  // Comment 是 Vue 内部定义的一个特殊标识符，表示要创建一个 HTML 注释节点。
+  // 可以防止意外错误
   if (!type || type === NULL_DYNAMIC_COMPONENT) {
     if (__DEV__ && !type) {
       warn(`Invalid vnode type when creating vnode: ${type}.`)
@@ -559,6 +584,7 @@ function _createVNode(
     type = Comment
   }
 
+  // 如果type是VNode，则克隆该VNode，通常出现在<component :is="vnode"/>这种情况
   if (isVNode(type)) {
     // createVNode receiving an existing vnode. This happens in cases like
     // <component :is="vnode"/>
@@ -567,23 +593,28 @@ function _createVNode(
     if (children) {
       normalizeChildren(cloned, children)
     }
+
+    // 块级树已经启用，当前不是块节点，有当前块
     if (isBlockTreeEnabled > 0 && !isBlockNode && currentBlock) {
+      // 如果cloned是组件节点，则替换当前块中的组件节点
       if (cloned.shapeFlag & ShapeFlags.COMPONENT) {
         currentBlock[currentBlock.indexOf(type)] = cloned
       } else {
+        // 如果cloned不是组件节点，则将cloned添加到当前块中
         currentBlock.push(cloned)
       }
     }
+    // 表示跳过优化模式即完全diff
     cloned.patchFlag = PatchFlags.BAIL
     return cloned
   }
 
-  // class component normalization.
+  // vue2 类组件兼容
   if (isClassComponent(type)) {
     type = type.__vccOpts
   }
 
-  // 2.x async/functional component compat
+  // vue2 异步/函数式组件兼容
   if (__COMPAT__) {
     type = convertLegacyComponent(type, currentRenderingInstance)
   }
@@ -591,7 +622,10 @@ function _createVNode(
   // class & style normalization.
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
+    // 如果是响应式对象，则对他进行克隆，方便后续修改
     props = guardReactiveProps(props)!
+
+    // 对class和style进行规范化
     let { class: klass, style } = props
     if (klass && !isString(klass)) {
       props.class = normalizeClass(klass)
@@ -607,6 +641,7 @@ function _createVNode(
   }
 
   // encode the vnode type information into a bitmap
+  // 将 vnode 的类型编码为位图
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && isSuspense(type)
@@ -619,6 +654,7 @@ function _createVNode(
             ? ShapeFlags.FUNCTIONAL_COMPONENT
             : 0
 
+  // 在开发模式下，如果type是有状态组件isObject(type) == true，去除响应式
   if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
     warn(
@@ -643,6 +679,7 @@ function _createVNode(
   )
 }
 
+// 兼容vue3 proxy 和 vue2 Object.defineProperty 的响应式对象
 export function guardReactiveProps(
   props: (Data & VNodeProps) | null,
 ): (Data & VNodeProps) | null {

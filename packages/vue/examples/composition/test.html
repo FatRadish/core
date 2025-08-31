@@ -1,0 +1,43 @@
+<script src="../../dist/vue.global.js"></script>
+
+<div id="demo">
+  <div class="vnode" ref="vnode"></div>
+</div>
+
+<script>
+  const { createApp, h, ref } = Vue
+  const vnode = h('div', 'Hello World')
+
+  createApp({
+    setup() {
+
+      const vnode = ref(null)
+
+      return {
+        h,
+        render() {
+          return vnode
+        },
+        vnode,
+      }
+    },
+  }).mount('#demo')
+</script>
+
+<style>
+  #demo {
+    font-family: 'Helvetica', Arial, sans-serif;
+  }
+  a {
+    text-decoration: none;
+    color: #f66;
+  }
+  li {
+    line-height: 1.5em;
+    margin-bottom: 20px;
+  }
+  .author,
+  .date {
+    font-weight: bold;
+  }
+</style>
