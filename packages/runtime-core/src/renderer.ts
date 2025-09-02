@@ -348,6 +348,7 @@ function baseCreateRenderer(
     initFeatureFlags()
   }
 
+  //根据运行环境获取全局对象
   const target = getGlobalThis()
   target.__VUE__ = true
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -1191,6 +1192,8 @@ function baseCreateRenderer(
       registerHMR(instance)
     }
 
+    // 组件挂载时
+    // 在开发环境，将初始VNode推入警告上下文栈，并开始测量挂载时间
     if (__DEV__) {
       pushWarningContext(initialVNode)
       startMeasure(instance, `mount`)
@@ -1202,6 +1205,9 @@ function baseCreateRenderer(
     }
 
     // resolve props and slots for setup context
+    // Vue 2 兼容模式下，组件实例可能已经预创建
+    // 如果存在兼容实例，直接使用；否则创建新实例
+    // 解析设置上下文的 props 和 slots
     if (!(__COMPAT__ && compatMountInstance)) {
       if (__DEV__) {
         startMeasure(instance, `init`)
@@ -1217,6 +1223,7 @@ function baseCreateRenderer(
 
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
+    // setup() 是异步的。此组件依赖于异步逻辑，在继续执行之前先解析它。
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
@@ -1240,6 +1247,7 @@ function baseCreateRenderer(
       )
     }
 
+    // 在开发环境，从警告上下文栈中移除初始VNode，并结束挂载时间测量
     if (__DEV__) {
       popWarningContext()
       endMeasure(instance, `mount`)
@@ -2377,10 +2385,12 @@ function baseCreateRenderer(
       )
     }
     container._vnode = vnode
+    // 如果队列中没有正在刷新的任务，则开始刷新队列
+    // 刷新队列，执行所有预先和后先的回调
     if (!isFlushing) {
       isFlushing = true
-      flushPreFlushCbs()
-      flushPostFlushCbs()
+      flushPreFlushCbs() // 1. 执行 flush: 'pre' 的 watch 回调
+      flushPostFlushCbs() // 2. 执行 flush: 'post' 的 watch 回调
       isFlushing = false
     }
   }

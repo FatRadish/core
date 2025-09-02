@@ -698,9 +698,11 @@ export function createComponentInstance(
     instance.ctx = { _: instance }
   }
   instance.root = parent ? parent.root : instance
+  // 通过bind绑定实例，使得emit函数中的instance指向当前实例
   instance.emit = emit.bind(null, instance)
 
   // apply custom element special handling
+  // 如果组件是自定义元素，则调用自定义元素的特殊处理函数，（defineCustomElement）
   if (vnode.ce) {
     vnode.ce(instance)
   }
@@ -1179,6 +1181,7 @@ export function createSetupContext(
   }
 }
 
+//getComponentPublicInstance 函数是 Vue 3 组件对外接口的核心：
 export function getComponentPublicInstance(
   instance: ComponentInternalInstance,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null {
