@@ -372,6 +372,19 @@ function baseCreateRenderer(
 
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
+  /**
+   *
+   * @param n1 旧的 vnode
+   * @param n2 新的 vnode
+   * @param container 容器
+   * @param anchor 锚点
+   * @param parentComponent 父组件
+   * @param parentSuspense 父 Suspense 组件
+   * @param namespace 命名空间
+   * @param slotScopeIds 插槽作用域 ID
+   * @param optimized 是否优化
+   * @returns
+   */
   const patch: PatchFn = (
     n1,
     n2,
@@ -383,17 +396,19 @@ function baseCreateRenderer(
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren,
   ) => {
+    // 如果 n1 和 n2 是同一个 vnode，则直接返回
     if (n1 === n2) {
       return
     }
 
-    // patching & not same type, unmount old tree
+    //节点类型不同，需要卸载旧节点，挂载新节点
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
     }
 
+    // 如果 n2 的 patchFlag 为 PatchFlags.BAIL，则不进行优化
     if (n2.patchFlag === PatchFlags.BAIL) {
       optimized = false
       n2.dynamicChildren = null
@@ -401,12 +416,15 @@ function baseCreateRenderer(
 
     const { type, ref, shapeFlag } = n2
     switch (type) {
+      // 处理文本节点， 如模板中的 <div>{{ message }}</div>
       case Text:
         processText(n1, n2, container, anchor)
         break
+      // 处理注释节点， 如模板中的 <!-- v-if="false" 时，Vue 会创建 Comment 节点作为占位符 -->
       case Comment:
         processCommentNode(n1, n2, container, anchor)
         break
+      // 处理静态节点， 如模板中的 <div>static</div>
       case Static:
         if (n1 == null) {
           mountStaticNode(n2, container, anchor, namespace)
@@ -414,6 +432,7 @@ function baseCreateRenderer(
           patchStaticNode(n1, n2, container, namespace)
         }
         break
+      // 处理片段节点， 如模板中的 <div><span>Hello</span><span>World</span></div>
       case Fragment:
         processFragment(
           n1,
@@ -428,6 +447,7 @@ function baseCreateRenderer(
         )
         break
       default:
+        // 处理元素节点
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(
             n1,
@@ -441,6 +461,7 @@ function baseCreateRenderer(
             optimized,
           )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          // 处理组件节点
           processComponent(
             n1,
             n2,
@@ -453,6 +474,7 @@ function baseCreateRenderer(
             optimized,
           )
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
+          // 处理 Teleport 节点
           ;(type as typeof TeleportImpl).process(
             n1 as TeleportVNode,
             n2 as TeleportVNode,
@@ -466,6 +488,7 @@ function baseCreateRenderer(
             internals,
           )
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+          // 处理 Suspense 节点
           ;(type as typeof SuspenseImpl).process(
             n1,
             n2,
@@ -2369,6 +2392,7 @@ function baseCreateRenderer(
 
   let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
+    // 如果 vnode 为 null，且 container._vnode 存在（组件被挂载过），则卸载容器中的 vnode
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
