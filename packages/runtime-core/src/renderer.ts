@@ -1165,7 +1165,9 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     n2.slotScopeIds = slotScopeIds
+    // n1 == null 表示是第一次挂载
     if (n1 == null) {
+      // 如果是 KeepAlive 组件
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -1186,6 +1188,7 @@ function baseCreateRenderer(
         )
       }
     } else {
+      // n1 != null 表示是更新
       updateComponent(n1, n2, optimized)
     }
   }
@@ -1259,6 +1262,7 @@ function baseCreateRenderer(
         initialVNode.placeholder = placeholder.el
       }
     } else {
+      // 组件响应式模块，
       setupRenderEffect(
         instance,
         initialVNode,

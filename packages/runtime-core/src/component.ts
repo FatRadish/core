@@ -693,6 +693,7 @@ export function createComponentInstance(
     sp: null,
   }
   if (__DEV__) {
+    // 开发环境，创建一个代理对象，用于在开发环境暴露内部实例和公共属性
     instance.ctx = createDevRenderContext(instance)
   } else {
     instance.ctx = { _: instance }
@@ -810,9 +811,11 @@ export function setupComponent(
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
+  //  props 和 slots
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children, optimized || isSSR)
 
+  // 处理状态组件
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined
@@ -861,10 +864,11 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
-    pauseTracking()
+    pauseTracking() // 暂停响应式追踪
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
     const reset = setCurrentInstance(instance)
+    // 调用 setup 函数，捕获错误
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -874,19 +878,23 @@ function setupStatefulComponent(
         setupContext,
       ],
     )
+    // 判断 setup 函数返回的是否是 Promise 及是否是异步组件
     const isAsyncSetup = isPromise(setupResult)
-    resetTracking()
+    resetTracking() // 恢复响应式追踪
     reset()
 
+    // 标记 async setup 组件 和 serverPrefetch 的边界
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
       markAsyncBoundary(instance)
     }
 
     if (isAsyncSetup) {
+      // 清理当前实例引用，避免内存泄漏
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
+        // SSR 环境：等待 Promise 解析
         return setupResult
           .then((resolvedResult: unknown) => {
             handleSetupResult(instance, resolvedResult, isSSR)
@@ -897,6 +905,7 @@ function setupStatefulComponent(
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.
+        // 非 SSR 环境：将 Promise 赋值给 instance.asyncDep，等待后续处理
         instance.asyncDep = setupResult
         if (__DEV__ && !instance.suspense) {
           const name = Component.name ?? 'Anonymous'
@@ -914,6 +923,7 @@ function setupStatefulComponent(
         )
       }
     } else {
+      // 非异步组件：处理 setup 函数返回的结果
       handleSetupResult(instance, setupResult, isSSR)
     }
   } else {
@@ -928,11 +938,14 @@ export function handleSetupResult(
 ): void {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
+    // setup 返回了一个内联渲染函数
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
       // set it as ssrRender instead.
+      // SSR 环境：设置为 ssrRender
       instance.ssrRender = setupResult
     } else {
+      // 客户端：设置为 render 函数
       instance.render = setupResult as InternalRenderFunction
     }
   } else if (isObject(setupResult)) {
@@ -947,6 +960,7 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // 将 setup 返回的对象转换为响应式对象 (如果已经是响应式对象，则直接返回)
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -993,7 +1007,7 @@ export function finishComponentSetup(
   const Component = instance.type as ComponentOptions
 
   if (__COMPAT__) {
-    convertLegacyRenderFn(instance)
+    convertLegacyRenderFn(instance) // 转换旧版渲染函数
 
     if (__DEV__ && Component.compatConfig) {
       validateCompatConfig(Component.compatConfig)
@@ -1005,6 +1019,7 @@ export function finishComponentSetup(
   if (!instance.render) {
     // only do on-the-fly compile if not in SSR - SSR on-the-fly compilation
     // is done by server-renderer
+    // 只有在非 SSR 环境且没有预编译渲染函数时才进行运行时编译
     if (!isSSR && compile && !Component.render) {
       const template =
         (__COMPAT__ &&
@@ -1016,6 +1031,7 @@ export function finishComponentSetup(
         if (__DEV__) {
           startMeasure(instance, `compile`)
         }
+        // 编译器选项合并
         const { isCustomElement, compilerOptions } = instance.appContext.config
         const { delimiters, compilerOptions: componentCompilerOptions } =
           Component
@@ -1037,6 +1053,7 @@ export function finishComponentSetup(
             extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }
+        // 编译模板
         Component.render = compile(template, finalCompilerOptions)
         if (__DEV__) {
           endMeasure(instance, `compile`)
@@ -1049,12 +1066,16 @@ export function finishComponentSetup(
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and
     // also only allows a whitelist of globals to fallthrough.
+    //对于使用 `with` 块的运行时编译渲染函数，
+    // 所使用的渲染代理需要不同的 `has` 处理程序，
+    // 该处理程序性能更佳，并且只允许全局变量白名单通过。
     if (installWithProxy) {
       installWithProxy(instance)
     }
   }
 
   // support for 2.x options
+  // 支持 2.x 选项 API
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     const reset = setCurrentInstance(instance)
     pauseTracking()

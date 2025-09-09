@@ -50,6 +50,8 @@ export function convertLegacyRenderFn(
     return
   }
 
+  //  v3 预编译函数，因为 v2 渲染函数永远不需要超过 2 个参数，
+  //  并且 v2 函数渲染函数已经被规范化为 v3 函数组件
   if (render.length >= 2) {
     // v3 pre-compiled function, since v2 render functions never need more than
     // 2 arguments, and v2 functional render functions would have already been
@@ -59,6 +61,7 @@ export function convertLegacyRenderFn(
   }
 
   // v2 render function, try to provide compat
+  // v2 渲染功能，尽量提供兼容
   if (checkCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)) {
     const wrapped = (Component.render = function compatRender() {
       // @ts-expect-error
@@ -119,6 +122,7 @@ export function compatH(
   children?: LegacyVNodeChildren,
 ): VNode
 
+// 兼容渲染函数
 export function compatH(
   type: any,
   propsOrChildren?: any,
