@@ -1,0 +1,31 @@
+<script src="../../dist/vue.global.js"></script>
+
+<div id="demo">
+  <div>{{count}} ===> {{duboulCount}}</div>
+  <button @click="()=> count++">count ++</button>
+</div>
+
+<script>
+  const { createApp, ref, watchEffect, computed } = Vue
+
+  createApp({
+    setup() {
+      const count = ref(1)
+
+      const duboulCount = computed(() => {
+        return count.value * 2
+      })
+
+      watchEffect(() => {
+        console.log('watchEffect', duboulCount.value)
+      })
+
+      return {
+        count,
+        duboulCount,
+      }
+    },
+  }).mount('#demo')
+</script>
+
+<style></style>
