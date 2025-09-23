@@ -69,17 +69,20 @@ export class Dep {
   /**
    * Link between this dep and the current active effect
    */
+  //当前活跃连接
   activeLink?: Link = undefined
 
   /**
    * Doubly linked list representing the subscribing effects (tail)
    */
+  //双向链表尾部
   subs?: Link = undefined
 
   /**
    * Doubly linked list representing the subscribing effects (head)
    * DEV only, for invoking onTrigger hooks in correct order
    */
+  //双向链表头部
   subsHead?: Link
 
   /**
@@ -91,6 +94,7 @@ export class Dep {
   /**
    * Subscriber counter
    */
+  //订阅者计数，跟踪有多少个副作用订阅了这个依赖项
   sc: number = 0
 
   /**
