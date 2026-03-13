@@ -1,8 +1,9 @@
 <script src="../../dist/vue.global.js"></script>
 
 <div id="demo">
-  <div>{{count}} ===> {{duboulCount}}</div>
-  <button @click="()=> count++">count ++</button>
+  <div @click="handelClick()">watchEffect</div>
+  <div @click="()=> count += 1">count + 1</div>
+  <div>{{count}} {{doubleCount}}</div>
 </div>
 
 <script>
@@ -12,20 +13,21 @@
     setup() {
       const count = ref(1)
 
-      const duboulCount = computed(() => {
+      const doubleCount = computed(() => {
         return count.value * 2
       })
 
-      watchEffect(() => {
-        console.log('watchEffect', duboulCount.value)
-      })
+      function handelClick() {
+        watchEffect(() => {
+          console.log('doubleCount', doubleCount.value)
+        })
+      }
 
       return {
         count,
-        duboulCount,
+        doubleCount,
+        handelClick,
       }
     },
   }).mount('#demo')
 </script>
-
-<style></style>
